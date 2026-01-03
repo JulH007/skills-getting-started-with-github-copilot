@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${details.participants
                   .map(
                     (participant) =>
-                      `<li><span class="participant-email">${participant}</span></li>`
+                      `<li class="participant-item"><span class="participant-email">${participant}</span><button class="delete-participant" title="Remove participant" data-activity="${name}" data-email="${participant}">✖</button></li>`
                   )
                   .join("")}
               </ul>
@@ -60,6 +60,35 @@ document.addEventListener("DOMContentLoaded", () => {
         option.textContent = name;
         activitySelect.appendChild(option);
       });
+
+      // Add event listeners for delete buttons
+      document.querySelectorAll('.delete-participant').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const activity = btn.getAttribute('data-activity');
+          const email = btn.getAttribute('data-email');
+          if (!confirm(`Remove ${email} from ${activity}?`)) return;
+          try {
+            const response = await fetch(`/activities/${encodeURIComponent(activity)}/participants/${encodeURIComponent(email)}`, {
+              method: 'DELETE',
+            });
+            if (response.ok) {
+              fetchActivities();
+              messageDiv.textContent = `Removed ${email} from ${activity}.`;
+              messageDiv.className = 'message success';
+              messageDiv.classList.remove('hidden');
+            } else {
+              const data = await response.json();
+              messageDiv.textContent = data.detail || 'Failed to remove participant.';
+              messageDiv.className = 'message error';
+              messageDiv.classList.remove('hidden');
+            }
+          } catch (error) {
+            messageDiv.textContent = 'Error removing participant.';
+            messageDiv.className = 'message error';
+            messageDiv.classList.remove('hidden');
+          }
+        });
+      });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
       console.error("Error fetching activities:", error);
@@ -87,6 +116,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
